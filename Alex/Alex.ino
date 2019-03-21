@@ -34,6 +34,13 @@ volatile TDirection dir = STOP;
 #define RF                  10  // Right forward pin
 #define RR                  11  // Right reverse pin
 
+// Pi, for calculating turn circumference 
+#define PI 3.141592654
+
+// Alex's length and breadth in cm
+
+#define ALEX_LENGTH 16.5
+#define ALEX_BREADTH 12.5
 /*
  *    Alex's State Variables
  */
@@ -58,6 +65,9 @@ volatile unsigned long rightRevs;
 volatile unsigned long forwardDist;
 volatile unsigned long reverseDist;
 
+//Variables to keep track of whether we have moved a commanded distance
+unsigned long deltaDist;
+unsigned long newDist;
 
 /*
  * 
@@ -92,6 +102,21 @@ void sendStatus()
   // packetType and command files accordingly, then use sendResponse
   // to send out the packet. See sendMessage on how to use sendResponse.
   //
+  TPacket statusPacket;
+  statusPacket.packetType=PACKET_TYPE_RESPONSE;
+  statusPacket.command = RESP_STATUS;
+  statusPacket.params[0] = leftForwardTicks;
+  statusPacket.params[1] = rightForwardTicks;
+  statusPacket.params[2] = leftReverseTicks;
+  statusPacket.params[3] = rightReverseTicks;
+  statusPacket.params[4] = leftForwardTicksTurns;
+  statusPacket.params[5] = rightForwardTicksTurns;
+  statusPacket.params[6] = leftReverseTicksTurns;
+  statusPacket.params[7] = rightReverseTicksTurns;
+  statusPacket.params[8] = forwardDist;
+  statusPacket.params[9] = reverseDist;
+  sendResponse(&statusPacket);
+  
 }
 
 void sendMessage(const char *message)
@@ -204,7 +229,7 @@ void leftISR()
   // We calculate forwardDist only in leftISR because we
   // assume that the left and right wheels move at the same
   // time.
-  forwardDist = leftRevs * WHEEL_CIRC;
+  //forwardDist = leftRevs * WHEEL_CIRC;
   
   //Serial.print("LEFT: ");
 //  Serial.println(leftTicks);
@@ -349,6 +374,13 @@ int pwmVal(float speed)
 // continue moving forward indefinitely.
 void forward(float dist, float speed)
 {
+  if(dist > 0)
+    deltaDist = dist;
+  else
+    deltaDist = 9999999;
+
+  newDist = forwardDist + deltaDist;
+  
   dir = FORWARD;
   int val = pwmVal(speed);
 
@@ -373,6 +405,12 @@ void forward(float dist, float speed)
 // continue reversing indefinitely.
 void reverse(float dist, float speed)
 {
+  if(dist > 0)
+    deltaDist = dist;
+  else
+    deltaDist = 9999999;
+
+  newDist = reverseDist + deltaDist;
   dir = BACKWARD;
   int val = pwmVal(speed);
 
@@ -498,7 +536,14 @@ void handleCommand(TPacket *command)
         sendOK();
         stop();
         break;
-    
+    case COMMAND_GET_STATS:
+        sendOK();
+        sendStatus();
+        break;
+    case COMMAND_CLEAR_STATS:
+        sendOK();
+        clearOneCounter(command->params[0]);
+        break;
         
     default:
       sendBadCommand();
@@ -582,7 +627,7 @@ void loop() {
 
 // Uncomment the code below for Step 2 of Activity 3 in Week 8 Studio 2
 
- forward(0, 100);
+// forward(0, 100);
 
 // Uncomment the code below for Week 9 Studio 2
 
@@ -604,6 +649,37 @@ void loop() {
       {
         sendBadChecksum();
       } 
+
+  if (deltaDist > 0)
+  {
+    if(dir == FORWARD)
+    {
+      if (forwardDist >= newDist)
+      {
+        deltaDist = 0;
+        newDist = 0;
+        stop();
+      }
+    }
+
+    else
+      if (dir == BACKWARD)
+      {
+        if(reverseDist >= newDist)
+        {
+          deltaDist=0;
+          newDist=0;
+          stop();
+        }
+      }
+      else
+        if (dir == STOP)
+        {
+            deltaDist = 0;
+            newDist = 0;
+            stop();
+        }
       
+  }
      
 }
