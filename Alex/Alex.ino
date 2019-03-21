@@ -1,5 +1,16 @@
+#include <serialize.h>
+
 #include "packet.h"
 #include "constants.h"
+typedef enum
+{
+  STOP = 0,
+  FORWARD = 1,
+  BACKWARD = 2,
+  LEFT = 3,
+  RIGHT = 4
+} TDirection;
+volatile TDirection dir = STOP;
 
 /*
  * Alex's configuration constants
@@ -8,13 +19,13 @@
 // Number of ticks per revolution from the 
 // wheel encoder.
 
-#define COUNTS_PER_REV      1
+#define COUNTS_PER_REV      192
 
 // Wheel circumference in cm.
 // We will use this to calculate forward/backward distance traveled 
 // by taking revs * WHEEL_CIRC
 
-#define WHEEL_CIRC          1
+#define WHEEL_CIRC          20.1
 
 // Motor control pins. You need to adjust these till
 // Alex moves in the correct direction
@@ -29,9 +40,15 @@
 
 // Store the ticks from Alex's left and
 // right encoders.
-volatile unsigned long leftTicks; 
-volatile unsigned long rightTicks;
+volatile unsigned long leftForwardTicks; 
+volatile unsigned long rightForwardTicks;
+volatile unsigned long leftReverseTicks; 
+volatile unsigned long rightReverseTicks;
 
+volatile unsigned long leftForwardTicksTurns; 
+volatile unsigned long rightForwardTicksTurns;
+volatile unsigned long leftReverseTicksTurns; 
+volatile unsigned long rightReverseTicksTurns;
 // Store the revolutions on Alex's left
 // and right wheels
 volatile unsigned long leftRevs;
@@ -170,26 +187,45 @@ void enablePullups()
 // Functions to be called by INT0 and INT1 ISRs.
 void leftISR()
 {
-  leftTicks++;
-
-  leftRevs = leftTicks / COUNTS_PER_REV;
+  
+  if(dir == FORWARD){
+    leftForwardTicks++;
+    forwardDist = (unsigned long) ((float) leftForwardTicks / COUNTS_PER_REV * WHEEL_CIRC);
+  }else if(dir == BACKWARD){
+    leftReverseTicks++;
+        reverseDist = (unsigned long) ((float) leftReverseTicks / COUNTS_PER_REV * WHEEL_CIRC);
+  }else if(dir == LEFT){
+    leftReverseTicksTurns++;
+  }else if(dir == RIGHT){
+    leftForwardTicksTurns++;
+  }
+  //leftRevs = leftTicks / COUNTS_PER_REV;
 
   // We calculate forwardDist only in leftISR because we
   // assume that the left and right wheels move at the same
   // time.
   forwardDist = leftRevs * WHEEL_CIRC;
   
-  Serial.print("LEFT: ");
-  Serial.println(leftTicks);
+  //Serial.print("LEFT: ");
+//  Serial.println(leftTicks);
 }
 
 void rightISR()
 {
-  rightTicks++;
 
-  rightRevs = rightTicks / COUNTS_PER_REV;
-  Serial.print("RIGHT: ");
-  Serial.println(rightTicks);
+  if(dir == FORWARD){
+    rightForwardTicks++;
+  }else if(dir == BACKWARD){
+    rightReverseTicks++;
+  }else if(dir == LEFT){
+    rightForwardTicksTurns++;
+  }else if(dir == RIGHT){
+    rightReverseTicksTurns++;
+  }
+
+  //rightRevs = rightTicks / COUNTS_PER_REV;
+  //Serial.print("RIGHT: ");
+ // Serial.println(rightTicks);
 }
 
 // Set up the external interrupt pins INT0 and INT1
@@ -303,7 +339,7 @@ int pwmVal(float speed)
   if(speed > 100.0)
     speed = 100.0;
 
-  return (int) (speed / 100.0) * 255.0;
+  return (int) ( (speed / 100.0) * 255.0 );
 }
 
 // Move Alex forward "dist" cm at speed "speed".
@@ -313,6 +349,7 @@ int pwmVal(float speed)
 // continue moving forward indefinitely.
 void forward(float dist, float speed)
 {
+  dir = FORWARD;
   int val = pwmVal(speed);
 
   // For now we will ignore dist and move
@@ -336,7 +373,7 @@ void forward(float dist, float speed)
 // continue reversing indefinitely.
 void reverse(float dist, float speed)
 {
-
+  dir = BACKWARD;
   int val = pwmVal(speed);
 
   // For now we will ignore dist and 
@@ -359,6 +396,7 @@ void reverse(float dist, float speed)
 // turn left indefinitely.
 void left(float ang, float speed)
 {
+  dir = LEFT;
   int val = pwmVal(speed);
 
   // For now we will ignore ang. We will fix this in Week 9.
@@ -378,6 +416,7 @@ void left(float ang, float speed)
 // turn right indefinitely.
 void right(float ang, float speed)
 {
+  dir = RIGHT;
   int val = pwmVal(speed);
 
   // For now we will ignore ang. We will fix this in Week 9.
@@ -393,6 +432,7 @@ void right(float ang, float speed)
 // Stop Alex. To replace with bare-metal code later.
 void stop()
 {
+  dir = STOP;
   analogWrite(LF, 0);
   analogWrite(LR, 0);
   analogWrite(RF, 0);
@@ -407,8 +447,14 @@ void stop()
 // Clears all our counters
 void clearCounters()
 {
-  leftTicks=0;
-  rightTicks=0;
+  leftForwardTicks=0;
+  rightForwardTicks=0;
+  leftReverseTicks = 0;
+  rightReverseTicks=0;
+  leftForwardTicksTurns=0;
+  rightForwardTicksTurns=0;
+  leftReverseTicksTurns=0;
+  rightReverseTicksTurns=0;
   leftRevs=0;
   rightRevs=0;
   forwardDist=0;
@@ -418,36 +464,7 @@ void clearCounters()
 // Clears one particular counter
 void clearOneCounter(int which)
 {
-  switch(which)
-  {
-    case 0:
-      clearCounters();
-      break;
-
-    case 1:
-      leftTicks=0;
-      break;
-
-    case 2:
-      rightTicks=0;
-      break;
-
-    case 3:
-      leftRevs=0;
-      break;
-
-    case 4:
-      rightRevs=0;
-      break;
-
-    case 5:
-      forwardDist=0;
-      break;
-
-    case 6:
-      reverseDist=0;
-      break;
-  }
+  clearCounters();
 }
 // Intialize Vincet's internal states
 
@@ -465,11 +482,23 @@ void handleCommand(TPacket *command)
         sendOK();
         forward((float) command->params[0], (float) command->params[1]);
       break;
-
-    /*
-     * Implement code for other commands here.
-     * 
-     */
+    case COMMAND_REVERSE:
+        sendOK();
+        reverse((float) command->params[0], (float) command->params[1]);
+        break;
+    case COMMAND_TURN_LEFT:
+        sendOK();
+        left((float) command->params[0], (float) command->params[1]);
+        break;
+    case COMMAND_TURN_RIGHT:
+        sendOK();
+        right((float) command->params[0], (float) command->params[1]);
+        break;
+    case COMMAND_STOP:
+        sendOK();
+        stop();
+        break;
+    
         
     default:
       sendBadCommand();
@@ -553,11 +582,11 @@ void loop() {
 
 // Uncomment the code below for Step 2 of Activity 3 in Week 8 Studio 2
 
-// forward(0, 100);
+ forward(0, 100);
 
 // Uncomment the code below for Week 9 Studio 2
 
-/*
+
  // put your main code here, to run repeatedly:
   TPacket recvPacket; // This holds commands from the Pi
 
@@ -576,5 +605,5 @@ void loop() {
         sendBadChecksum();
       } 
       
-      */
+     
 }
