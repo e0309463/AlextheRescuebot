@@ -2,6 +2,7 @@
 
 #include "packet.h"
 #include "constants.h"
+#include <math.h>
 typedef enum
 {
   STOP = 0,
@@ -41,6 +42,9 @@ volatile TDirection dir = STOP;
 
 #define ALEX_LENGTH 16.5
 #define ALEX_BREADTH 12.5
+
+float AlexDiagonal= 0.0;
+float AlexCirc = 0.0;
 /*
  *    Alex's State Variables
  */
@@ -68,6 +72,9 @@ volatile unsigned long reverseDist;
 //Variables to keep track of whether we have moved a commanded distance
 unsigned long deltaDist;
 unsigned long newDist;
+
+unsigned long deltaTicks;
+unsigned long targetTicks;
 
 /*
  * 
@@ -427,6 +434,11 @@ void reverse(float dist, float speed)
   analogWrite(RF, 0);
 }
 
+unsigned long computeDeltaTicks(float ang)
+{
+  unsigned long ticks = (unsigned long) ((ang * AlexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC));
+  return ticks;
+}
 // Turn Alex left "ang" degrees at speed "speed".
 // "speed" is expressed as a percentage. E.g. 50 is
 // turn left at half speed.
@@ -434,6 +446,12 @@ void reverse(float dist, float speed)
 // turn left indefinitely.
 void left(float ang, float speed)
 {
+  if (ang == 0)
+    deltaTicks = 99999999;
+  else
+    deltaTicks = computeDeltaTicks(ang);
+
+  targetTicks = leftReverseTicksTurns + deltaTicks;
   dir = LEFT;
   int val = pwmVal(speed);
 
@@ -454,6 +472,12 @@ void left(float ang, float speed)
 // turn right indefinitely.
 void right(float ang, float speed)
 {
+  if (ang == 0)
+    deltaTicks = 99999999;
+  else
+    deltaTicks = computeDeltaTicks(ang);
+
+  targetTicks = rightReverseTicksTurns + deltaTicks;
   dir = RIGHT;
   int val = pwmVal(speed);
 
@@ -589,7 +613,8 @@ void waitForHello()
 
 void setup() {
   // put your setup code here, to run once:
-
+  AlexDiagonal = sqrt((ALEX_LENGTH * ALEX_LENGTH) + (ALEX_BREADTH * ALEX_BREADTH));
+  AlexCirc = PI * AlexDiagonal;
   cli();
   setupEINT();
   setupSerial();
@@ -680,6 +705,36 @@ void loop() {
             stop();
         }
       
+  }
+
+  if (deltaTicks > 0)
+  {
+    if (dir == LEFT)
+    {
+      if (leftReverseTicksTurns >= targetTicks)
+      {
+        deltaTicks=0;
+        targetTicks = 0;
+        stop();
+      }
+    }
+    else
+      if (dir == RIGHT)
+      {
+        if(rightReverseTicksTurns >= targetTicks)
+        {
+          deltaTicks=0;
+          targetTicks=0;
+          stop();
+        }
+      }
+      else
+        if(dir == STOP)
+        {
+          deltaTicks=0;
+          targetTicks=0;
+          stop();
+        }
   }
      
 }

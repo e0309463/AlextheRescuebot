@@ -123,8 +123,8 @@ u_result capture_and_display(RPlidarDriver * drv, const char* fname)
         
             //TODO: Figure out the transformation from angle+distnace
             // to (X,Y) coordinate
-            float endptX = centerPtX + distPixel*sin(rad); //change this
-            float endptY = centerPtY + distPixel*cos(rad); //chnage this
+            float endptX = centerPtX + distPixel*sin(rad + rotation) + xdisplacement; //change this
+            float endptY = centerPtY + distPixel*cos(rad + rotation) + ydisplacement; //chnage this
 
             //Quality of the data is represented by brightness
             //Note: Not used for our studio
