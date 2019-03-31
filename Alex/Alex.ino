@@ -349,7 +349,7 @@ void writeSerial(const char *buffer, int len)
  
   for(int count = 0 ; count < len ; count++){
   while( (UCSR0A & 0b00100000) == 0)
-    UDR0 = buffer[count++] ;
+    UDR0 = buffer[count] ;
   }
   
 }
