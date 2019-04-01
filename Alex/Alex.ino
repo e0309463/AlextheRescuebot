@@ -30,10 +30,11 @@ volatile TDirection dir = STOP;
 
 // Motor control pins. You need to adjust these till
 // Alex moves in the correct direction
-#define LF                  0b00100000   // Left forward pin 6 port d
-#define LR                  0b00010000   // Left reverse pin 5 port d
-#define RF                  0b00000010  // Right forward pin 10 port b
-#define RR                  0b00000001  // Right reverse pin 9 port b
+#define LF                  6   // Left forward pin
+#define LR                  5   // Left reverse pin
+#define RF                  10  // Right forward pin
+#define RR                  11  // Right reverse pin
+
 // Pi, for calculating turn circumference 
 #define PI 3.141592654
 
@@ -74,11 +75,6 @@ unsigned long newDist;
 
 unsigned long deltaTicks;
 unsigned long targetTicks;
-
-static volatile int LFval;
-static volatile int LRval;
-static volatile int RFval;
-static volatile int RRval;
 
 /*
  * 
@@ -303,15 +299,7 @@ ISR(INT1_vect)
 void setupSerial()
 {
   // To replace later with bare-metal.
-  //Serial.begin(57600);
-  unsigned int b;
-  //b = (unsigned int) round(16000000/(16 * 57600)) – 1;
-  b =  (unsigned int) round(16000000/(16*57600)) - 1;
-  UBRR0H = (unsigned char) (b >> 8);
-  UBRR0L = (unsigned char) b;
-
-  UCSR0C = 0b00000110;
-  UCSR0A = 0;
+  Serial.begin(57600);
 }
 
 // Start the serial connection. For now we are using
@@ -322,7 +310,6 @@ void startSerial()
 {
   // Empty for now. To be replaced with bare-metal code
   // later on.
-  UCSR0B = 0b00011000;
   
 }
 
@@ -335,8 +322,8 @@ int readSerial(char *buffer)
 
   int count=0;
 
-  while( (UCSR0A & 0b10000000) == 0)
-    buffer[count++] = UDR0;
+  while(Serial.available())
+    buffer[count++] = Serial.read();
 
   return count;
 }
@@ -346,12 +333,7 @@ int readSerial(char *buffer)
 
 void writeSerial(const char *buffer, int len)
 {
- 
-  for(int count = 0 ; count < len ; count++){
-  while( (UCSR0A & 0b00100000) == 0)
-    UDR0 = buffer[count] ;
-  }
-  
+  Serial.write(buffer, len);
 }
 
 /*
@@ -364,24 +346,12 @@ void writeSerial(const char *buffer, int len)
 // to drive the motors.
 void setupMotors()
 {
-  DDRB |= (RF | RR);
-  DDRD |= (LF | LR);
-  TCNT0 = 0;
-  OCR0A = 0;
-  OCR0B = 0;
-  TIMSK0 |= 0b110; // OCIEA = 1 OCIEB = 1
-  TCCR0B = 0b00000011;
   /* Our motor set up is:  
    *    A1IN - Pin 5, PD5, OC0B
    *    A2IN - Pin 6, PD6, OC0A
    *    B1IN - Pin 10, PB2, OC1B
-   *    B2In - pIN 11, PB3, OC2A //Change to pin 9 oc1A
+   *    B2In - pIN 11, PB3, OC2A
    */
-   TCNT1 = 0;
-   OCR1A = 0;
-   OCR1B = 0;
-   TIMSK1 |= 0b110; // OCIEA = 1 OCIEB = 1
-   TCCR1B = 0b00000011;
 }
 
 // Start the PWM for Alex's motors.
@@ -428,14 +398,11 @@ void forward(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  TCCR0A = 0b10000001;
-  PORTD &= ~LR; //off LR
-  LFval = val;
-
-  TCCR1A = 0b00100001;
-  PORTB &= ~RR; //off RR
-  RFval = val;
   
+  analogWrite(LF, val);
+  analogWrite(RF, val);
+  analogWrite(LR,0);
+  analogWrite(RR, 0);
 }
 
 // Reverse Alex "dist" cm at speed "speed".
@@ -461,14 +428,12 @@ void reverse(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  TCCR0A = 0b00100001;
-  PORTD &= ~LF; //off LF
-  LRval = val;
-
-  TCCR1A = 0b10000001;
-  PORTB &= ~RF; //off RF
-  RRval = val;
+  analogWrite(LR, val);
+  analogWrite(RR, val);
+  analogWrite(LF, 0);
+  analogWrite(RF, 0);
 }
+
 unsigned long computeDeltaTicks(float ang)
 {
   unsigned long ticks = (unsigned long) ((ang * AlexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC));
@@ -494,14 +459,10 @@ void left(float ang, float speed)
   // We will also replace this code with bare-metal later.
   // To turn left we reverse the left wheel and move
   // the right wheel forward.
-  TCCR0A = 0b00100001;
-  PORTD &= ~LF; //off LF
-  LRval = val;
-
-  TCCR1A = 0b00100001;
-  PORTB &= ~RR; //off RR
-  RFval = val;
-
+  analogWrite(LR, val);
+  analogWrite(RF, val);
+  analogWrite(LF, 0);
+  analogWrite(RR, 0);
 }
 
 // Turn Alex right "ang" degrees at speed "speed".
@@ -524,27 +485,22 @@ void right(float ang, float speed)
   // We will also replace this code with bare-metal later.
   // To turn right we reverse the right wheel and move
   // the left wheel forward.
-  TCCR0A = 0b10000001;
-  PORTD &= ~LR; //off LR
-  LFval = val;
-
-  TCCR1A = 0b10000001;
-  PORTB &= ~RF; //off RF
-  RRval = val;
-
+  analogWrite(RR, val);
+  analogWrite(LF, val);
+  analogWrite(LR, 0);
+  analogWrite(RF, 0);
 }
 
 // Stop Alex. To replace with bare-metal code later.
 void stop()
 {
   dir = STOP;
-  TCCR0A = 0b00000001;
-  PORTD &= (~LR & ~LF); //off LR & LF
-
-  TCCR1A = 0b00000001;
-  PORTB &= ( ~RR & ~ RF ); //off RF & RF
-
+  analogWrite(LF, 0);
+  analogWrite(LR, 0);
+  analogWrite(RF, 0);
+  analogWrite(RR, 0);
 }
+
 /*
  * Alex's setup and run codes
  * 
@@ -696,7 +652,7 @@ void loop() {
 
 // Uncomment the code below for Step 2 of Activity 3 in Week 8 Studio 2
 
- forward(100, 100);
+// forward(0, 100);
 
 // Uncomment the code below for Week 9 Studio 2
 
