@@ -93,11 +93,7 @@ volatile TDirection dir = STOP;
 
 // Motor control pins. You need to adjust these till
 // Alex moves in the correct direction
-/*#define LF                  6   // Left forward pin
-#define LR                  5   // Left reverse pin
-#define RF                  10  // Right forward pin
-#define RR                  9  // Right reverse pin
-*/
+
 #define LF                  0b01000000   // Left forward pin 6 port d
 #define LR                  0b00100000   // Left reverse pin 5 port d
 #define RF                  0b00000100  // Right forward pin 10 port b
@@ -413,24 +409,18 @@ void writeSerial(const char *buffer, int len)
 // to drive the motors.
 void setupMotors()
 {
-  /* Our motor set up is:  
-   *    A1IN - Pin 5, PD5, OC0B
-   *    A2IN - Pin 6, PD6, OC0A
-   *    B1IN - Pin 10, PB2, OC1B
-   *    B2In - pIN 11, PB3, OC2A
-   */
-     DDRB |= (RF | RR);
+  DDRB |= (RF | RR);
   DDRD |= (LF | LR);
   TCNT0 = 0;
   OCR0A = 0;
   OCR0B = 0;
   TIMSK0 |= 0b110; // OCIEA = 1 OCIEB = 1
   TCCR0B = 0b00000011;
-   TCNT1 = 0;
-   OCR1A = 0;
-   OCR1B = 0;
-   TIMSK1 |= 0b110; // OCIEA = 1 OCIEB = 1
-   TCCR1B = 0b00000011;
+  TCNT1 = 0;
+  OCR1A = 0;
+  OCR1B = 0;
+  TIMSK1 |= 0b110; // OCIEA = 1 OCIEB = 1
+  TCCR1B = 0b00000011;
 }
 static volatile int LFval;
 static volatile int LRval;
@@ -616,158 +606,7 @@ void stop()
   PORTB &= ( ~RR & ~ RF ); //off RF & RF
 
 }
-/*
-// Start the PWM for Alex's motors.
-// We will implement this later. For now it is
-// blank.
-void startMotors()
-{
-  
-}
 
-// Convert percentages to PWM values
-int pwmVal(float speed)
-{
-  if(speed < 0.0)
-    speed = 0;
-
-  if(speed > 100.0)
-    speed = 100.0;
-
-  return (int) ( (speed / 100.0) * 255.0 );
-}
-
-// Move Alex forward "dist" cm at speed "speed".
-// "speed" is expressed as a percentage. E.g. 50 is
-// move forward at half speed.
-// Specifying a distance of 0 means Alex will
-// continue moving forward indefinitely.
-void forward(float dist, float speed)
-{
-  if(dist > 0)
-    deltaDist = dist;
-  else
-    deltaDist = 9999999;
-
-  newDist = forwardDist + deltaDist;
-  
-  dir = FORWARD;
-  int val = pwmVal(speed);
-
-  // For now we will ignore dist and move
-  // forward indefinitely. We will fix this
-  // in Week 9.
-
-  // LF = Left forward pin, LR = Left reverse pin
-  // RF = Right forward pin, RR = Right reverse pin
-  // This will be replaced later with bare-metal code.
-  
-  analogWrite(LF, val);
-  analogWrite(RF, val);
-  analogWrite(LR,0);
-  analogWrite(RR, 0);
-}
-
-// Reverse Alex "dist" cm at speed "speed".
-// "speed" is expressed as a percentage. E.g. 50 is
-// reverse at half speed.
-// Specifying a distance of 0 means Alex will
-// continue reversing indefinitely.
-void reverse(float dist, float speed)
-{
-  if(dist > 0)
-    deltaDist = dist;
-  else
-    deltaDist = 9999999;
-
-  newDist = reverseDist + deltaDist;
-  dir = BACKWARD;
-  int val = pwmVal(speed);
-
-  // For now we will ignore dist and 
-  // reverse indefinitely. We will fix this
-  // in Week 9.
-
-  // LF = Left forward pin, LR = Left reverse pin
-  // RF = Right forward pin, RR = Right reverse pin
-  // This will be replaced later with bare-metal code.
-  analogWrite(LR, val);
-  analogWrite(RR, val);
-  analogWrite(LF, 0);
-  analogWrite(RF, 0);
-}
-
-unsigned long computeDeltaTicks(float ang)
-{
-  unsigned long ticks = (unsigned long) ((ang * AlexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC));
-  return ticks;
-}
-// Turn Alex left "ang" degrees at speed "speed".
-// "speed" is expressed as a percentage. E.g. 50 is
-// turn left at half speed.
-// Specifying an angle of 0 degrees will cause Alex to
-// turn left indefinitely.
-void left(float ang, float speed)
-{
-  if (ang == 0)
-    deltaTicks = 99999999;
-  else
-    deltaTicks = computeDeltaTicks(ang);
-
-  targetTicks = leftReverseTicksTurns + deltaTicks;
-  dir = LEFT;
-  int val = pwmVal(speed);
-
-  // For now we will ignore ang. We will fix this in Week 9.
-  // We will also replace this code with bare-metal later.
-  // To turn left we reverse the left wheel and move
-  // the right wheel forward.
-  analogWrite(LR, val);
-  analogWrite(RF, val);
-  analogWrite(LF, 0);
-  analogWrite(RR, 0);
-}
-
-// Turn Alex right "ang" degrees at speed "speed".
-// "speed" is expressed as a percentage. E.g. 50 is
-// turn left at half speed.
-// Specifying an angle of 0 degrees will cause Alex to
-// turn right indefinitely.
-void right(float ang, float speed)
-{
-  if (ang == 0)
-    deltaTicks = 99999999;
-  else
-    deltaTicks = computeDeltaTicks(ang);
-
-  targetTicks = rightReverseTicksTurns + deltaTicks;
-  dir = RIGHT;
-  int val = pwmVal(speed);
-
-  // For now we will ignore ang. We will fix this in Week 9.
-  // We will also replace this code with bare-metal later.
-  // To turn right we reverse the right wheel and move
-  // the left wheel forward.
-  analogWrite(RR, val);
-  analogWrite(LF, val);
-  analogWrite(LR, 0);
-  analogWrite(RF, 0);
-}
-
-// Stop Alex. To replace with bare-metal code later.
-void stop()
-{
-  dir = STOP;
-  analogWrite(LF, 0);
-  analogWrite(LR, 0);
-  analogWrite(RF, 0);
-  analogWrite(RR, 0);
-}
-*/
-/*
- * Alex's setup and run codes
- * 
- */
 
 // Clears all our counters
 void clearCounters()
