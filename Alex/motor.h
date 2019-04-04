@@ -1,7 +1,7 @@
-#define LF                  0b00100000   // Left forward pin 6 port d
-#define LR                  0b00010000   // Left reverse pin 5 port d
-#define RF                  0b00000010  // Right forward pin 10 port b
-#define RR                  0b00000001  // Right reverse pin 9 port b
+#define LF                  0b01000000   // Left forward pin 6 port d
+#define LR                  0b00100000   // Left reverse pin 5 port d
+#define RF                  0b00000100  // Right forward pin 10 port b
+#define RR                  0b00000010  // Right reverse pin 9 port b
 void setupMotors()
 {
   DDRB |= (RF | RR);
