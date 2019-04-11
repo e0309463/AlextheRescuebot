@@ -3,69 +3,6 @@
 #include "packet.h"
 #include "constants.h"
 #include <math.h>
-#include <avr/sleep.h>
-#define PRR_TWI_MASK 0b10000000
-#define PRR_SPI_MASK 0b00000100
-#define ADCSRA_ADC_MASK 0b10000000
-#define PRR_ADC_MASK 0b00000001
-#define PRR_TIMER2_MASK 0b01000000
-#define PRR_TIMER0_MASK 0b00100000
-#define PRR_TIMER1_MASK 0b00001000
-#define SMCR_SLEEP_ENABLE_MASK 0b00000001
-#define SMCR_IDLE_MODE_MASK 0b11110001
-void WDT_off(void)
-{
-  /* Global interrupt should be turned OFF here if not
-  already done so */
-  /* Clear WDRF in MCUSR */
-  MCUSR &= ~(1<<WDRF);
-  
-  /* Write logical one to WDCE and WDE */
-  /* Keep old prescaler setting to prevent unintentional
-  time-out */
-  WDTCSR |= (1<<WDCE) | (1<<WDE);
-  
-  /* Turn off WDT */
-  WDTCSR = 0x00;
-  
-  /* Global interrupt should be turned ON here if
-  subsequent operations after calling this function do
-  not require turning off global interrupt */
-}
-
-void setupPowerSaving()
-{
-  // Turn off the WDT
-  WDT_off();
-
-  PRR |= PRR_TWI_MASK;
-  PRR |= PRR_SPI_MASK;
-  ADCSRA &= ~ADCSRA_ADC_MASK;
-  PRR |= PRR_ADC_MASK;
-
-  SMCR &= SMCR_IDLE_MODE_MASK;
-
-  DDRB |= 0b00100000;
-  PORTB &= 0b11011111;
-  
-}
-
-void putArduinoToIdle()
-{
-  PRR |= PRR_TIMER0_MASK;
-  PRR |= PRR_TIMER1_MASK;
-  PRR |= PRR_TIMER2_MASK;
-
-  SMCR |= SMCR_SLEEP_ENABLE_MASK;
-
-  sleep_cpu();
-
-  SMCR &= ~(SMCR_SLEEP_ENABLE_MASK);
-
-  PRR &= ~(PRR_TIMER0_MASK);
-  PRR &= ~(PRR_TIMER1_MASK);
-  PRR &= ~(PRR_TIMER2_MASK);
-}
 typedef enum
 {
   STOP = 0,
@@ -93,7 +30,6 @@ volatile TDirection dir = STOP;
 
 // Motor control pins. You need to adjust these till
 // Alex moves in the correct direction
-
 #define LF                  0b01000000   // Left forward pin 6 port d
 #define LR                  0b00100000   // Left reverse pin 5 port d
 #define RF                  0b00000100  // Right forward pin 10 port b
@@ -138,6 +74,11 @@ unsigned long newDist;
 
 unsigned long deltaTicks;
 unsigned long targetTicks;
+
+static volatile int LFval;
+static volatile int LRval;
+static volatile int RFval;
+static volatile int RRval;
 
 /*
  * 
@@ -362,7 +303,15 @@ ISR(INT1_vect)
 void setupSerial()
 {
   // To replace later with bare-metal.
-  Serial.begin(57600);
+  //Serial.begin(57600);
+  unsigned int b;
+  //b = (unsigned int) round(16000000/(16 * 57600)) – 1;
+  b =  (unsigned int) round(16000000/(16*57600)) - 1;
+  UBRR0H = (unsigned char) (b >> 8);
+  UBRR0L = (unsigned char) b;
+
+  UCSR0C = 0b00000110;
+  UCSR0A = 0;
 }
 
 // Start the serial connection. For now we are using
@@ -373,6 +322,7 @@ void startSerial()
 {
   // Empty for now. To be replaced with bare-metal code
   // later on.
+  UCSR0B = 0b00011000;
   
 }
 
@@ -383,11 +333,12 @@ void startSerial()
 int readSerial(char *buffer)
 {
 
-  int count=0;
-
-  while(Serial.available())
-    buffer[count++] = Serial.read();
-
+  
+ for(int count=0;count < sizeof(buffer) ;  ++count;){
+  while( (UCSR0A & 0b10000000) == 0){
+    buffer[count] = UDR0;
+  }
+ }
   return count;
 }
 
@@ -396,7 +347,14 @@ int readSerial(char *buffer)
 
 void writeSerial(const char *buffer, int len)
 {
-  Serial.write(buffer, len);
+ 
+  for(int count = 0 ; count < sizeof(buffer); count++){
+
+  while( (UCSR0A & 0b00100000) == 0)
+    UDR0 = buffer[count] ;
+  }
+
+  
 }
 
 /*
@@ -416,37 +374,18 @@ void setupMotors()
   OCR0B = 0;
   TIMSK0 |= 0b110; // OCIEA = 1 OCIEB = 1
   TCCR0B = 0b00000011;
-  TCNT1 = 0;
-  OCR1A = 0;
-  OCR1B = 0;
-  TIMSK1 |= 0b110; // OCIEA = 1 OCIEB = 1
-  TCCR1B = 0b00000011;
+  /* Our motor set up is:  
+   *    A1IN - Pin 5, PD5, OC0B
+   *    A2IN - Pin 6, PD6, OC0A
+   *    B1IN - Pin 10, PB2, OC1B
+   *    B2In - pIN 11, PB3, OC2A //Change to pin 9 oc1A
+   */
+   TCNT1 = 0;
+   OCR1A = 0;
+   OCR1B = 0;
+   TIMSK1 |= 0b110; // OCIEA = 1 OCIEB = 1
+   TCCR1B = 0b00000011;
 }
-static volatile int LFval;
-static volatile int LRval;
-static volatile int RFval;
-static volatile int RRval;
- ISR(TIMER0_COMPA_vect)
-{
-OCR0A = LFval;
-}
-ISR(TIMER0_COMPB_vect)
-{
-OCR0B = LRval;
-}
- ISR(TIMER1_COMPA_vect)
-{
-OCR1A = RRval;
-}
-ISR(TIMER1_COMPB_vect)
-{
-OCR1B = RFval;
-}
-
-// Set up Alex's motors. Right now this is empty, but
-// later you will replace it with code to set up the PWMs
-// to drive the motors.
-
 
 // Start the PWM for Alex's motors.
 // We will implement this later. For now it is
@@ -457,7 +396,6 @@ void startMotors()
 }
 
 // Convert percentages to PWM values
-
 int pwmVal(float speed)
 {
   if(speed < 0.0)
@@ -534,7 +472,11 @@ void reverse(float dist, float speed)
   PORTB &= ~RF; //off RF
   RRval = val;
 }
-
+unsigned long computeDeltaTicks(float ang)
+{
+  unsigned long ticks = (unsigned long) ((ang * AlexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC));
+  return ticks;
+}
 // Turn Alex left "ang" degrees at speed "speed".
 // "speed" is expressed as a percentage. E.g. 50 is
 // turn left at half speed.
@@ -606,7 +548,10 @@ void stop()
   PORTB &= ( ~RR & ~ RF ); //off RF & RF
 
 }
-
+/*
+ * Alex's setup and run codes
+ * 
+ */
 
 // Clears all our counters
 void clearCounters()
@@ -726,7 +671,6 @@ void setup() {
   enablePullups();
   initializeState();
   sei();
-  setupPowerSaving();
 }
 
 void handlePacket(TPacket *packet)
@@ -750,11 +694,7 @@ void handlePacket(TPacket *packet)
       break;
   }
 }
-unsigned long computeDeltaTicks(float ang)
-{
-  unsigned long ticks = (unsigned long) ((ang * AlexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC));
-  return ticks;
-}
+TPacket recvPacket;
 void loop() {
 
 // Uncomment the code below for Step 2 of Activity 3 in Week 8 Studio 2
@@ -765,19 +705,13 @@ void loop() {
 
 
  // put your main code here, to run repeatedly:
-  TPacket recvPacket; // This holds commands from the Pi
-  if (dir == STOP)
-  {
-    putArduinoToIdle();
-  }
-  
-  TResult result = readPacket(&recvPacket);
+   // This holds commands from the Pi
 
-    
+  TResult result = readPacket(&recvPacket);
   
   if(result == PACKET_OK)
     handlePacket(&recvPacket);
-  else{
+  else
     if(result == PACKET_BAD)
     {
       sendBadPacket();
@@ -787,8 +721,7 @@ void loop() {
       {
         sendBadChecksum();
       } 
-  
-  }
+
   if (deltaDist > 0)
   {
     if(dir == FORWARD)
