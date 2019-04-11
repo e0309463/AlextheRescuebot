@@ -428,19 +428,19 @@ static volatile int RFval;
 static volatile int RRval;
  ISR(TIMER0_COMPA_vect)
 {
-OCR0A = LFval;
+OCR0A = LRval;
 }
 ISR(TIMER0_COMPB_vect)
 {
-OCR0B = LRval;
+OCR0B = LFval;
 }
  ISR(TIMER1_COMPA_vect)
 {
-OCR1A = RRval;
+OCR1A = RFval;
 }
 ISR(TIMER1_COMPB_vect)
 {
-OCR1B = RFval;
+OCR1B = RRval;
 }
 
 // Set up Alex's motors. Right now this is empty, but
@@ -493,11 +493,11 @@ void forward(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  TCCR0A = 0b10000001;
+  TCCR0A = 0b00100001;
   PORTD &= ~LR; //off LR
   LFval = val;
 
-  TCCR1A = 0b00100001;
+  TCCR1A = 0b10000001;
   PORTB &= ~RR; //off RR
   RFval = val;
   
@@ -526,11 +526,11 @@ void reverse(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  TCCR0A = 0b00100001;
+  TCCR0A = 0b10000001;
   PORTD &= ~LF; //off LF
   LRval = val;
 
-  TCCR1A = 0b10000001;
+  TCCR1A = 0b00100001;
   PORTB &= ~RF; //off RF
   RRval = val;
 }
