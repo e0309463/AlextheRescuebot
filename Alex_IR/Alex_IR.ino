@@ -94,10 +94,10 @@ volatile TDirection dir = STOP;
 // Motor control pins. You need to adjust these till
 // Alex moves in the correct direction
 
-#define LF                  0b00100000   // Left reverse pin 5 port d
-#define LR                  0b01000000   // Left forward pin 6 port d
-#define RF                  0b00000010  // Right reverse pin 9 port b
-#define RR                  0b00000100  // Right forward pin 10 port b
+#define LF                  0b01000000   // Left forward pin 6 port d
+#define LR                  0b00100000   // Left reverse pin 5 port d
+#define RF                  0b00000100  // Right forward pin 10 port b
+#define RR                  0b00000010  // Right reverse pin 9 port b
 // Pi, for calculating turn circumference 
 #define PI 3.141592654
 
@@ -363,14 +363,6 @@ void setupSerial()
 {
   // To replace later with bare-metal.
   Serial.begin(57600);
-  /*unsigned int b;
-  //b = (unsigned int) round(16000000/(16 * 57600)) – 1;
-  b =  (unsigned int) round(16000000/(16*57600)) - 1;
-  UBRR0H = (unsigned char) (b >> 8);
-  UBRR0L = (unsigned char) b;
-
-  UCSR0C = 0b00000110;
-  UCSR0A = 0;*/
 }
 
 // Start the serial connection. For now we are using
@@ -381,7 +373,7 @@ void startSerial()
 {
   // Empty for now. To be replaced with bare-metal code
   // later on.
-  //UCSR0B = 0b00011000;
+  
 }
 
 // Read the serial port. Returns the read character in
@@ -392,10 +384,9 @@ int readSerial(char *buffer)
 {
 
   int count=0;
+
   while(Serial.available())
     buffer[count++] = Serial.read();
-  //while((UCSR0A & 0b10000000) == 1)
-    //buffer[count++] = UDR0;
 
   return count;
 }
@@ -406,10 +397,6 @@ int readSerial(char *buffer)
 void writeSerial(const char *buffer, int len)
 {
   Serial.write(buffer, len);
-  /*for(int count = 0 ; count < sizeof(buffer) ; count++){
-  while( (UCSR0A & 0b00100000) == 0)
-    UDR0 = buffer[count] ;
-  }*/
 }
 
 /*
@@ -441,19 +428,19 @@ static volatile int RFval;
 static volatile int RRval;
  ISR(TIMER0_COMPA_vect)
 {
-OCR0A = LRval;
+OCR0A = LFval;
 }
 ISR(TIMER0_COMPB_vect)
 {
-OCR0B = LFval;
+OCR0B = LRval;
 }
  ISR(TIMER1_COMPA_vect)
 {
-OCR1A = RFval;
+OCR1A = RRval;
 }
 ISR(TIMER1_COMPB_vect)
 {
-OCR1B = RRval;
+OCR1B = RFval;
 }
 
 // Set up Alex's motors. Right now this is empty, but
@@ -506,11 +493,11 @@ void forward(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  TCCR0A = 0b00100001;
+  TCCR0A = 0b10000001;
   PORTD &= ~LR; //off LR
   LFval = val;
 
-  TCCR1A = 0b10000001;
+  TCCR1A = 0b00100001;
   PORTB &= ~RR; //off RR
   RFval = val;
   
@@ -539,11 +526,11 @@ void reverse(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  TCCR0A = 0b10000001;
+  TCCR0A = 0b00100001;
   PORTD &= ~LF; //off LF
   LRval = val;
 
-  TCCR1A = 0b00100001;
+  TCCR1A = 0b10000001;
   PORTB &= ~RF; //off RF
   RRval = val;
 }
@@ -568,11 +555,11 @@ void left(float ang, float speed)
   // We will also replace this code with bare-metal later.
   // To turn left we reverse the left wheel and move
   // the right wheel forward.
-  TCCR0A = 0b10000001;
+  TCCR0A = 0b00100001;
   PORTD &= ~LF; //off LF
   LRval = val;
 
-  TCCR1A = 0b10000001;
+  TCCR1A = 0b00100001;
   PORTB &= ~RR; //off RR
   RFval = val;
 
@@ -598,11 +585,11 @@ void right(float ang, float speed)
   // We will also replace this code with bare-metal later.
   // To turn right we reverse the right wheel and move
   // the left wheel forward.
-  TCCR0A = 0b00100001;
+  TCCR0A = 0b10000001;
   PORTD &= ~LR; //off LR
   LFval = val;
 
-  TCCR1A = 0b00100001;
+  TCCR1A = 0b10000001;
   PORTB &= ~RF; //off RF
   RRval = val;
 
@@ -726,41 +713,6 @@ void waitForHello()
   } // !exit
 }
 
-void IR(TPacket *command) {
-  if((PINB & 0b00001000)&&(PINB & 0b00010000)){
-    if (dir == FORWARD){
-      if(!(PINB & 0b00100000)){
-        stop();
-        }else{
-      LFval = pwmVal((float) command -> params[1]);
-      RFval = pwmVal((float) command -> params[1]);
-        }
-    }
-    else if (dir == BACKWARD){
-      LRval = pwmVal((float) command -> params[1]);
-      RRval = pwmVal((float) command -> params[1]);
-    }
-  }
-  else if((PINB & 0b00001000)){
-    if (dir == FORWARD){
-      LFval -= 10;
-    }
-    else if (dir == BACKWARD){
-      LRval -= 2;
-    }
-  }
-
-  else if((PINB & 0b00010000)){
-    if (dir == FORWARD){
-      RFval -= 10;
-    }
-    else if (dir == BACKWARD){
-      RRval -= 2;
-    }
-  }
-  //delay(200);
-}
-
 void setup() {
   // put your setup code here, to run once:
   AlexDiagonal = sqrt((ALEX_LENGTH * ALEX_LENGTH) + (ALEX_BREADTH * ALEX_BREADTH));
@@ -773,7 +725,6 @@ void setup() {
   startMotors();
   enablePullups();
   initializeState();
-  DDRB &= 0b11000111; //using pin 4 and 7 for IR
   sei();
   setupPowerSaving();
 }
@@ -793,7 +744,6 @@ void handlePacket(TPacket *packet)
       break;
 
     case PACKET_TYPE_MESSAGE:
-    
       break;
 
     case PACKET_TYPE_HELLO:
@@ -843,14 +793,6 @@ void loop() {
   {
     if(dir == FORWARD)
     {
-      if(leftForwardTicks > rightForwardTicks + 50){
-        RFval += 2;
-        LFval -= 2;
-      }else if(rightForwardTicks > leftForwardTicks + 50){
-        LFval += 2;
-        RFval -= 2;
-      }
-      IR(&recvPacket);
       if (forwardDist >= newDist)
       {
         deltaDist = 0;
@@ -861,15 +803,7 @@ void loop() {
 
     else
       if (dir == BACKWARD)
-      { 
-        if(leftReverseTicks > rightReverseTicks + 50){
-        RFval += 2;
-        LFval -= 2;
-      }else if(rightReverseTicks > leftReverseTicks + 50){
-        LFval += 2;
-        RFval -= 2;
-      }
-        IR(&recvPacket);
+      {
         if(reverseDist >= newDist)
         {
           deltaDist=0;
