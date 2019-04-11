@@ -363,14 +363,14 @@ void setupSerial()
 {
   // To replace later with bare-metal.
   //Serial.begin(57600);
-  unsigned int b;
+  /*unsigned int b;
   //b = (unsigned int) round(16000000/(16 * 57600)) – 1;
   b =  (unsigned int) round(16000000/(16*57600)) - 1;
   UBRR0H = (unsigned char) (b >> 8);
   UBRR0L = (unsigned char) b;
 
   UCSR0C = 0b00000110;
-  UCSR0A = 0;
+  UCSR0A = 0;*/
 }
 
 // Start the serial connection. For now we are using
@@ -381,7 +381,7 @@ void startSerial()
 {
   // Empty for now. To be replaced with bare-metal code
   // later on.
-  UCSR0B = 0b00011000;
+  //UCSR0B = 0b00011000;
 }
 
 // Read the serial port. Returns the read character in
@@ -392,10 +392,10 @@ int readSerial(char *buffer)
 {
 
   int count=0;
-  /*while(Serial.available())
-    buffer[count++] = Serial.read();*/
-  while((UCSR0A & 0b10000000) == 1)
-    buffer[count++] = UDR0;
+  while(Serial.available())
+    buffer[count++] = Serial.read();
+  //while((UCSR0A & 0b10000000) == 1)
+    //buffer[count++] = UDR0;
 
   return count;
 }
@@ -405,11 +405,11 @@ int readSerial(char *buffer)
 
 void writeSerial(const char *buffer, int len)
 {
-  //Serial.write(buffer, len);
-  for(int count = 0 ; count < sizeof(buffer) ; count++){
+  Serial.write(buffer, len);
+  /*for(int count = 0 ; count < sizeof(buffer) ; count++){
   while( (UCSR0A & 0b00100000) == 0)
     UDR0 = buffer[count] ;
-  }
+  }*/
 }
 
 /*

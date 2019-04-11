@@ -334,11 +334,9 @@ int readSerial(char *buffer)
 {
 
   
- for(int count=0;count < sizeof(buffer) ;  ++count;){
-  while( (UCSR0A & 0b10000000) == 0){
-    buffer[count] = UDR0;
-  }
- }
+  int count=0;
+  while(Serial.available())
+    buffer[count++] = Serial.read();
   return count;
 }
 
@@ -347,14 +345,7 @@ int readSerial(char *buffer)
 
 void writeSerial(const char *buffer, int len)
 {
- 
-  for(int count = 0 ; count < sizeof(buffer); count++){
-
-  while( (UCSR0A & 0b00100000) == 0)
-    UDR0 = buffer[count] ;
-  }
-
-  
+ Serial.write(buffer, len);
 }
 
 /*
