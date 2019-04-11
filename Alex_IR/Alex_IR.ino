@@ -392,7 +392,8 @@ int readSerial(char *buffer)
 {
 
   int count=0;
-
+  /*while(Serial.available())
+    buffer[count++] = Serial.read();*/
   while((UCSR0A & 0b10000000) == 1)
     buffer[count++] = UDR0;
 
@@ -405,7 +406,7 @@ int readSerial(char *buffer)
 void writeSerial(const char *buffer, int len)
 {
   //Serial.write(buffer, len);
-  for(int count = 0 ; count < len ; count++){
+  for(int count = 0 ; count < sizeof(buffer) ; count++){
   while( (UCSR0A & 0b00100000) == 0)
     UDR0 = buffer[count] ;
   }
@@ -788,7 +789,7 @@ void handlePacket(TPacket *packet)
     case PACKET_TYPE_ERROR:
       break;
 
-    case PACKET_TYPE_MESSAGE:ls
+    case PACKET_TYPE_MESSAGE:
     
       break;
 
