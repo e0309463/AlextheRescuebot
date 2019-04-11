@@ -94,10 +94,10 @@ volatile TDirection dir = STOP;
 // Motor control pins. You need to adjust these till
 // Alex moves in the correct direction
 
-#define LF                  0b01000000   // Left forward pin 6 port d
-#define LR                  0b00100000   // Left reverse pin 5 port d
-#define RF                  0b00000100  // Right forward pin 10 port b
-#define RR                  0b00000010  // Right reverse pin 9 port b
+#define LF                  0b00100000   // Left reverse pin 5 port d
+#define LR                  0b01000000   // Left forward pin 6 port d
+#define RF                  0b00000010  // Right reverse pin 9 port b
+#define RR                  0b00000100  // Right forward pin 10 port b
 // Pi, for calculating turn circumference 
 #define PI 3.141592654
 
@@ -441,19 +441,19 @@ static volatile int RFval;
 static volatile int RRval;
  ISR(TIMER0_COMPA_vect)
 {
-OCR0A = LFval;
+OCR0A = LRval;
 }
 ISR(TIMER0_COMPB_vect)
 {
-OCR0B = LRval;
+OCR0B = LFval;
 }
  ISR(TIMER1_COMPA_vect)
 {
-OCR1A = RRval;
+OCR1A = RFval;
 }
 ISR(TIMER1_COMPB_vect)
 {
-OCR1B = RFval;
+OCR1B = RRval;
 }
 
 // Set up Alex's motors. Right now this is empty, but
@@ -506,11 +506,11 @@ void forward(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  TCCR0A = 0b10000001;
+  TCCR0A = 0b00100001;
   PORTD &= ~LR; //off LR
   LFval = val;
 
-  TCCR1A = 0b00100001;
+  TCCR1A = 0b10000001;
   PORTB &= ~RR; //off RR
   RFval = val;
   
@@ -539,11 +539,11 @@ void reverse(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  TCCR0A = 0b00100001;
+  TCCR0A = 0b10000001;
   PORTD &= ~LF; //off LF
   LRval = val;
 
-  TCCR1A = 0b10000001;
+  TCCR1A = 0b00100001;
   PORTB &= ~RF; //off RF
   RRval = val;
 }
@@ -568,11 +568,11 @@ void left(float ang, float speed)
   // We will also replace this code with bare-metal later.
   // To turn left we reverse the left wheel and move
   // the right wheel forward.
-  TCCR0A = 0b00100001;
+  TCCR0A = 0b10000001;
   PORTD &= ~LF; //off LF
   LRval = val;
 
-  TCCR1A = 0b00100001;
+  TCCR1A = 0b10000001;
   PORTB &= ~RR; //off RR
   RFval = val;
 
@@ -598,11 +598,11 @@ void right(float ang, float speed)
   // We will also replace this code with bare-metal later.
   // To turn right we reverse the right wheel and move
   // the left wheel forward.
-  TCCR0A = 0b10000001;
+  TCCR0A = 0b00100001;
   PORTD &= ~LR; //off LR
   LFval = val;
 
-  TCCR1A = 0b10000001;
+  TCCR1A = 0b00100001;
   PORTB &= ~RF; //off RF
   RRval = val;
 
@@ -727,18 +727,21 @@ void waitForHello()
 }
 
 void IR(TPacket *command) {
-  if((PIND & 0b00010000)&&(PIND & 0b10000000)){
+  if((PINB & 0b00001000)&&(PINB & 0b00010000)){
     if (dir == FORWARD){
+      if(!(PINB & 0b00100000)){
+        stop();
+        }else{
       LFval = pwmVal((float) command -> params[1]);
       RFval = pwmVal((float) command -> params[1]);
-
+        }
     }
     else if (dir == BACKWARD){
       LRval = pwmVal((float) command -> params[1]);
       RRval = pwmVal((float) command -> params[1]);
     }
   }
-  else if((PIND & 0b00010000)){
+  else if((PINB & 0b00001000)){
     if (dir == FORWARD){
       LFval -= 10;
     }
@@ -747,7 +750,7 @@ void IR(TPacket *command) {
     }
   }
 
-  else if((PIND & 0b10000000)){
+  else if((PINB & 0b00010000)){
     if (dir == FORWARD){
       RFval -= 10;
     }
@@ -755,7 +758,7 @@ void IR(TPacket *command) {
       RRval -= 2;
     }
   }
-  delay(200);
+  //delay(200);
 }
 
 void setup() {
@@ -770,7 +773,7 @@ void setup() {
   startMotors();
   enablePullups();
   initializeState();
-  DDRD &= 0b01101111; //using pin 4 and 7 for IR
+  DDRB &= 0b11000111; //using pin 4 and 7 for IR
   sei();
   setupPowerSaving();
 }
