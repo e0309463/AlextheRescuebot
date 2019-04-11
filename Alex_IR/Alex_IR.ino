@@ -45,8 +45,8 @@ void setupPowerSaving()
 
   SMCR &= SMCR_IDLE_MODE_MASK;
 
-  DDRB |= 0b00100000;
-  PORTB &= 0b11011111;
+  //DDRB |= 0b00100000;
+  //PORTB &= 0b11011111;
   
 }
 
@@ -94,10 +94,10 @@ volatile TDirection dir = STOP;
 // Motor control pins. You need to adjust these till
 // Alex moves in the correct direction
 
-#define LF                  0b00100000   // Left reverse pin 5 port d
-#define LR                  0b01000000   // Left forward pin 6 port d
-#define RF                  0b00000010  // Right reverse pin 9 port b
-#define RR                  0b00000100  // Right forward pin 10 port b
+#define LF                  0b01000000   // Left reverse pin 5 port d
+#define LR                  0b00100000   // Left forward pin 6 port d
+#define RF                  0b00000100  // Right reverse pin 9 port b
+#define RR                  0b00000010  // Right forward pin 10 port b
 // Pi, for calculating turn circumference 
 #define PI 3.141592654
 
@@ -726,14 +726,13 @@ void waitForHello()
 }
 
 void IR(TPacket *command) {
+  if(!(PINB & 0b00100000))
+        stop();
   if((PINB & 0b00001000)&&(PINB & 0b00010000)){
     if (dir == FORWARD){
-      if(!(PINB & 0b00100000)){
-        stop();
-        }else{
       LFval = pwmVal((float) command -> params[1]);
       RFval = pwmVal((float) command -> params[1]);
-        }
+        
     }
     else if (dir == BACKWARD){
       LRval = pwmVal((float) command -> params[1]);
@@ -742,19 +741,20 @@ void IR(TPacket *command) {
   }
   else if((PINB & 0b00001000)){
     if (dir == FORWARD){
-      LFval -= 10;
+      RFval = 0;
+     
     }
     else if (dir == BACKWARD){
-      LRval -= 2;
+      RRval = 0;
     }
   }
 
   else if((PINB & 0b00010000)){
     if (dir == FORWARD){
-      RFval -= 10;
+      LFval = 0;
     }
     else if (dir == BACKWARD){
-      RRval -= 2;
+      LRval = 0;
     }
   }
   //delay(200);
@@ -772,7 +772,7 @@ void setup() {
   startMotors();
   enablePullups();
   initializeState();
-  DDRB &= 0b11000111; //using pin 4 and 7 for IR
+  DDRB &= 0b11000111; //using pin 11,12,13
   sei();
   setupPowerSaving();
 }
@@ -842,13 +842,13 @@ void loop() {
   {
     if(dir == FORWARD)
     {
-      if(leftForwardTicks > rightForwardTicks + 50){
+      /*if(leftForwardTicks > rightForwardTicks + 50){
         RFval += 2;
         LFval -= 2;
       }else if(rightForwardTicks > leftForwardTicks + 50){
         LFval += 2;
         RFval -= 2;
-      }
+      }*/
       IR(&recvPacket);
       if (forwardDist >= newDist)
       {
