@@ -840,6 +840,13 @@ void loop() {
   {
     if(dir == FORWARD)
     {
+      if(leftForwardTicks > rightForwardTicks + 50){
+        RFval += 2;
+        LFval -= 2;
+      }else if(rightForwardTicks > leftForwardTicks + 50){
+        LFval += 2;
+        RFval -= 2;
+      }
       IR(&recvPacket);
       if (forwardDist >= newDist)
       {
@@ -852,6 +859,13 @@ void loop() {
     else
       if (dir == BACKWARD)
       { 
+        if(leftReverseTicks > rightReverseTicks + 50){
+        RFval += 2;
+        LFval -= 2;
+      }else if(rightReverseTicks > leftReverseTicks + 50){
+        LFval += 2;
+        RFval -= 2;
+      }
         IR(&recvPacket);
         if(reverseDist >= newDist)
         {
