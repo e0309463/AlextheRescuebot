@@ -362,7 +362,7 @@ ISR(INT1_vect)
 void setupSerial()
 {
   // To replace later with bare-metal.
-  //Serial.begin(57600);
+  Serial.begin(57600);
   /*unsigned int b;
   //b = (unsigned int) round(16000000/(16 * 57600)) – 1;
   b =  (unsigned int) round(16000000/(16*57600)) - 1;
