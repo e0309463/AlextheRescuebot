@@ -567,13 +567,14 @@ void left(float ang, float speed)
   // We will also replace this code with bare-metal later.
   // To turn left we reverse the left wheel and move
   // the right wheel forward.
-  TCCR0A = 0b10000001;
-  PORTD &= ~LF; //off LF
-  LRval = val;
+  TCCR0A = 0b00100001;
+  PORTD &= ~LR; //off LR
+  LFval = val;
 
-  TCCR1A = 0b10000001;
-  PORTB &= ~RR; //off RR
-  RFval = val;
+  TCCR1A = 0b00100001;
+  PORTB &= ~RF; //off RF
+  RRval = val;
+
 
 }
 
@@ -597,13 +598,13 @@ void right(float ang, float speed)
   // We will also replace this code with bare-metal later.
   // To turn right we reverse the right wheel and move
   // the left wheel forward.
-  TCCR0A = 0b00100001;
-  PORTD &= ~LR; //off LR
-  LFval = val;
+  TCCR0A = 0b10000001;
+  PORTD &= ~LF; //off LF
+  LRval = val;
 
-  TCCR1A = 0b00100001;
-  PORTB &= ~RF; //off RF
-  RRval = val;
+  TCCR1A = 0b10000001;
+  PORTB &= ~RR; //off RR
+  RFval = val;
 
 }
 
@@ -726,10 +727,11 @@ void waitForHello()
 }
 
 void IR(TPacket *command) {
-  if(!(PINB & 0b00100000))
-        stop();
+  
   if((PINB & 0b00001000)&&(PINB & 0b00010000)){
     if (dir == FORWARD){
+      if(!(PINB & 0b00100000))
+        stop();
       LFval = pwmVal((float) command -> params[1]);
       RFval = pwmVal((float) command -> params[1]);
         
