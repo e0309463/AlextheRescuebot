@@ -438,6 +438,10 @@ static volatile int LFval;
 static volatile int LRval;
 static volatile int RFval;
 static volatile int RRval;
+static volatile int LFvalinit;
+static volatile int LRvalinit;
+static volatile int RFvalinit;
+static volatile int RRvalinit;
  ISR(TIMER0_COMPA_vect)
 {
 OCR0A = LRval;
@@ -508,10 +512,12 @@ void forward(float dist, float speed)
   TCCR0A = 0b00100001;
   PORTD &= ~LR; //off LR
   LFval = val;
-
+  LFvalinit = LFval;
+  
   TCCR1A = 0b10000001;
   PORTB &= ~RR; //off RR
   RFval = val;
+  RFvalinit = RFval;
   
 }
 
@@ -541,10 +547,12 @@ void reverse(float dist, float speed)
   TCCR0A = 0b10000001;
   PORTD &= ~LF; //off LF
   LRval = val;
+  LRvalinit = LRval;
 
   TCCR1A = 0b00100001;
   PORTB &= ~RF; //off RF
   RRval = val;
+  RRvalinit = RRval;
 }
 
 // Turn Alex left "ang" degrees at speed "speed".
@@ -570,12 +578,12 @@ void left(float ang, float speed)
   TCCR0A = 0b00100001;
   PORTD &= ~LR; //off LR
   LFval = val;
+  LFvalinit = LFval;
 
   TCCR1A = 0b00100001;
   PORTB &= ~RF; //off RF
   RRval = val;
-
-
+  RRvalinit = RRval;
 }
 
 // Turn Alex right "ang" degrees at speed "speed".
@@ -601,10 +609,12 @@ void right(float ang, float speed)
   TCCR0A = 0b10000001;
   PORTD &= ~LF; //off LF
   LRval = val;
+  LRvalinit = LRval;
 
   TCCR1A = 0b10000001;
   PORTB &= ~RR; //off RR
   RFval = val;
+  LRvalinit = LRval;
 
 }
 
@@ -732,31 +742,31 @@ void IR(TPacket *command) {
     if (dir == FORWARD){
       if(!(PINB & 0b00100000))
         stop();
-      LFval = pwmVal((float) command -> params[1]);
-      RFval = pwmVal((float) command -> params[1]);
+      LFval = LFvalinit;
+      RFval = RFvalinit;
         
     }
     else if (dir == BACKWARD){
-      LRval = pwmVal((float) command -> params[1]);
-      RRval = pwmVal((float) command -> params[1]);
+      LRval = LRvalinit;
+      RRval = RRvalinit;
     }
   }
   else if((PINB & 0b00001000)){
     if (dir == FORWARD){
-      RFval = 0;
+      RFval = RFvalinit - 30;
      
     }
     else if (dir == BACKWARD){
-      RRval = 0;
+      RRval = RRvalinit - 30;
     }
   }
 
   else if((PINB & 0b00010000)){
     if (dir == FORWARD){
-      LFval = 0;
+      LFval = LFvalinit - 30;
     }
     else if (dir == BACKWARD){
-      LRval = 0;
+      LRval = LRvalinit - 30;
     }
   }
   //delay(200);
@@ -844,13 +854,13 @@ void loop() {
   {
     if(dir == FORWARD)
     {
-      /*if(leftForwardTicks > rightForwardTicks + 50){
-        RFval += 2;
-        LFval -= 2;
+      if(leftForwardTicks > rightForwardTicks + 50){
+        RFvalinit += 2;
+        LFvalinit -= 2;
       }else if(rightForwardTicks > leftForwardTicks + 50){
-        LFval += 2;
-        RFval -= 2;
-      }*/
+        LFvalinit += 2;
+        RFvalinit -= 2;
+      }
       IR(&recvPacket);
       if (forwardDist >= newDist)
       {
@@ -864,11 +874,11 @@ void loop() {
       if (dir == BACKWARD)
       { 
         if(leftReverseTicks > rightReverseTicks + 50){
-        RFval += 2;
-        LFval -= 2;
+        RFvalinit += 2;
+        LFvalinit -= 2;
       }else if(rightReverseTicks > leftReverseTicks + 50){
-        LFval += 2;
-        RFval -= 2;
+        LFvalinit += 2;
+        RFvalinit -= 2;
       }
         IR(&recvPacket);
         if(reverseDist >= newDist)
