@@ -753,20 +753,22 @@ void IR(TPacket *command) {
   }
   else if((PINB & 0b00001000)){
     if (dir == FORWARD){
-      RFval = RFvalinit - 30;
+      RFval = RFvalinit/2;
+      //RFval = 0;
      
     }
     else if (dir == BACKWARD){
-      RRval = RRvalinit - 30;
+      RRval = RRvalinit/2;
     }
   }
 
   else if((PINB & 0b00010000)){
     if (dir == FORWARD){
-      LFval = LFvalinit - 30;
+      LFval = LFvalinit/2;
+      //LFval = 0;
     }
     else if (dir == BACKWARD){
-      LRval = LRvalinit - 30;
+      LRval = LRvalinit/2;
     }
   }
   //delay(200);
@@ -854,13 +856,13 @@ void loop() {
   {
     if(dir == FORWARD)
     {
-      if(leftForwardTicks > rightForwardTicks + 50){
+      /*if(leftForwardTicks > rightForwardTicks + 50){
         RFvalinit += 2;
         LFvalinit -= 2;
       }else if(rightForwardTicks > leftForwardTicks + 50){
         LFvalinit += 2;
         RFvalinit -= 2;
-      }
+      }*/
       IR(&recvPacket);
       if (forwardDist >= newDist)
       {
@@ -873,13 +875,13 @@ void loop() {
     else
       if (dir == BACKWARD)
       { 
-        if(leftReverseTicks > rightReverseTicks + 50){
+        /*if(leftReverseTicks > rightReverseTicks + 50){
         RFvalinit += 2;
         LFvalinit -= 2;
       }else if(rightReverseTicks > leftReverseTicks + 50){
         LFvalinit += 2;
         RFvalinit -= 2;
-      }
+      }*/
         IR(&recvPacket);
         if(reverseDist >= newDist)
         {
