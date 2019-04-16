@@ -1,0 +1,7 @@
+digraph G {
+"base_link" -> "laser"[label="Broadcaster: /link2_broadcaster\nAverage rate: 10.649 Hz\nMost recent transform: 1555410071.063 ( 2.628 sec old)\nBuffer length: 1.502 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1555410073.690"[ shape=plaintext ] ;
+ }->"base_link";
+}

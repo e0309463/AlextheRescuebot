@@ -166,11 +166,11 @@ void flushInput()
 int dis = 0;
 int sp = 0;
 int ang = 0;
-void setParams(TPacket *commandPacket)
+void setParams()
 {
 	printf("Enter distance, angle in cm/degrees (e.g. 50) and power in %% (e.g. 75) separated by space.\n");
 	printf("E.g. 50 60 75 means go at 50 cm or 60 degrees left or right turn at 75%%\n");
-	scanf("%d %d %d", dis , ang , sp);
+	scanf("%d %d %d", &dis , &ang , &sp);
 	flushInput();
 }
 void getParams(TPacket *commandPacket)
@@ -178,15 +178,15 @@ void getParams(TPacket *commandPacket)
 	//printf("Enter distance/angle in cm/degrees (e.g. 50) and power in %% (e.g. 75) separated by space.\n");
 	//printf("E.g. 50 75 means go at 50 cm at 75%% power for forward/backward, or 50 degrees left or right turn at 75%%  power\n");
 	//scanf("%d %d", &commandPacket->params[0], &commandPacket->params[1]);
-	if (&commandPacket->command ==  COMMAND_FORWARD || &commandPacket->command ==  COMMAND_REVERSE) {
-		&commandPacket->params[0] = dis;
+	if (commandPacket->command ==  COMMAND_FORWARD || commandPacket->command ==  COMMAND_REVERSE) {
+		commandPacket->params[0] = dis;
 	}else{
-		&commandPacket->params[0] = ang;
+		commandPacket->params[0] = ang;
 	}
 
-	&commandPacket->params[1] = sp;
+	commandPacket->params[1] = sp;
 	
-	flushInput();
+//	flushInput();
 }
 
 void sendCommand(char command)
@@ -200,7 +200,7 @@ void sendCommand(char command)
 		case 'w':
 		case 'W':
 			getParams(&commandPacket);
-			commandPacket.command = COMMAND_FORWARD;0
+			commandPacket.command = COMMAND_FORWARD;
 			sendPacket(&commandPacket);
 			break;
 
@@ -252,7 +252,7 @@ void sendCommand(char command)
 		case 'p':
 		case 'P':
 			setParams();
-
+            break;
 		default:
 			printf("Bad command\n");
 
@@ -287,7 +287,7 @@ int main()
 		scanf("%c", &ch);
 
 		// Purge extraneous characters from input stream
-	//	flushInput();
+		flushInput();
 
 		sendCommand(ch);
 	}
