@@ -26,9 +26,7 @@ typedef enum
   RESP_BAD_CHECKSUM = 3,
   RESP_BAD_COMMAND = 4,
   RESP_BAD_RESPONSE = 5,
-  RESP_RIGHT = 6,
-  RESP_LEFT = 7,
-  RESP_FORNT = 8
+  RESP_STOP = 6
 } TResponseType;
 
 

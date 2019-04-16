@@ -30,7 +30,24 @@ void handleError(TResult error)
 			printf("ERROR: UNKNOWN ERROR\n");
 	}
 }
-
+void handleStop(TPacket *packet){
+	printf("------OBSTACLE------");
+	switch (packet->data[0])
+	{
+		case 'l':
+			printf("Too near to left");
+			break;
+		case 'r':
+			printf("Too near to right");
+			break;
+		case 'f':
+			printf("Too near to front");
+			break;
+	
+		default:
+			break;
+	}
+}
 void handleStatus(TPacket *packet)
 {
 	printf("\n ------- ALEX STATUS REPORT ------- \n\n");
@@ -58,6 +75,10 @@ void handleResponse(TPacket *packet)
 
 		case RESP_STATUS:
 			handleStatus(packet);
+		break;
+
+		case RESP_STOP:
+			handleStop(packet);
 		break;
 
 		default:

@@ -188,7 +188,13 @@ void sendStatus()
   sendResponse(&statusPacket);
   
 }
-
+void sendStop(char dir){
+  TPacket stopPacket;
+  stopPacket.packetType=PACKET_TYPE_RESPONSE;
+  stopPacket.command = RESP_STOP;
+  stopPacket.data[0] = dir;
+  sendResponse(&stopPacket);
+}
 void sendMessage(const char *message)
 {
   // Sends text messages back to the Pi. Useful
@@ -740,8 +746,10 @@ void IR(TPacket *command) {
   
   if((PINB & 0b00001000)&&(PINB & 0b00010000)){
     if (dir == FORWARD){
-      if(!(PINB & 0b00100000))
+      if(!(PINB & 0b00100000)){
         stop();
+        sendStop('f');
+      }
       LFval = LFvalinit;
       RFval = RFvalinit;
         
@@ -754,6 +762,7 @@ void IR(TPacket *command) {
   else if((PINB & 0b00001000)){
     if (dir == FORWARD){
       stop();
+      sendStop('r');
       //RFval = RFvalinit/2;
       //RFval = 0;
      
@@ -767,6 +776,7 @@ void IR(TPacket *command) {
   else if((PINB & 0b00010000)){
     if (dir == FORWARD){
       stop();
+      sendStop('l');
       //LFval = LFvalinit/2;
       //LFval = 0;
     }
