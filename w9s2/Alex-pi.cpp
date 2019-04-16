@@ -266,7 +266,7 @@ int main()
 		scanf("%c", &ch);
 
 		// Purge extraneous characters from input stream
-		flushInput();
+	//	flushInput();
 
 		sendCommand(ch);
 	}
