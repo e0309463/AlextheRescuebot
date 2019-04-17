@@ -31,17 +31,17 @@ void handleError(TResult error)
 	}
 }
 void handleStop(TPacket *packet){
-	printf("------OBSTACLE------");
+	printf("------OBSTACLE------\n");
 	switch (packet->data[0])
 	{
 		case 'l':
-			printf("Too near to left");
+			printf("Too near to left\n");
 			break;
 		case 'r':
-			printf("Too near to right");
+			printf("Too near to right\n");
 			break;
 		case 'f':
-			printf("Too near to front");
+			printf("Too near to front\n");
 			break;
 	
 		default:
