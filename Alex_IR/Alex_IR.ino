@@ -767,10 +767,6 @@ void IR(TPacket *command) {
       //RFval = 0;
      
     }
-    else if (dir == BACKWARD){
-      stop();
-      //RRval = RRvalinit/2;
-    }
   }
 
   else if((PINB & 0b00010000)){
@@ -779,10 +775,6 @@ void IR(TPacket *command) {
       sendStop('l');
       //LFval = LFvalinit/2;
       //LFval = 0;
-    }
-    else if (dir == BACKWARD){
-      stop();
-      //LRval = LRvalinit/2;
     }
   }
   //delay(200);
